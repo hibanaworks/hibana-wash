@@ -1,15 +1,14 @@
-#![no_std]
-
 mod syntax;
 
 #[cfg(target_os = "wasi")]
-mod shell;
+mod files;
 #[cfg(target_os = "wasi")]
-pub mod wasi;
+mod shell;
 #[cfg(target_os = "wasi")]
 pub use shell::run;
 
 #[cfg(not(target_os = "wasi"))]
 pub fn check(source: &[u8]) -> Result<(), &'static str> {
-    syntax::Tree::parse(source).map(|_| ())
+    let source = std::str::from_utf8(source).map_err(|_| "script is not UTF-8")?;
+    syntax::parse(source).map(|_| ())
 }

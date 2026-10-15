@@ -18,4 +18,4 @@ jobs:
           sh scripts/build.sh
           cargo +1.95.0 clippy --locked --target wasm32-wasip1 --release -- -D warnings
           python3 tools/profile.py target/wasm32-wasip1/release/hibana-wash.wasm > profile.json
-          python3 -c 'import json; p=json.load(open("profile.json")); assert not p["non_wasi_imports"]; assert len(p["imports"]) == 6; assert p["memories"] == [{"flags": 1, "minimum": 1, "maximum": 1}]'
+          python3 -c 'import json; p=json.load(open("profile.json")); assert not p["non_wasi_imports"]; assert p["memories"] == [{"flags": 0, "minimum": 1}]'

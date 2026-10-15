@@ -1,7 +1,8 @@
 # hibana-wash
 
 This repository owns a small WASI guest shell. Keep it dependency-free,
-Rust 2024 / stable Rust 1.95, no_std, and without an allocator.
+Rust 2024 / stable Rust 1.95, and use std for readable shell code.
+The no_std/no_alloc constraints belong to Hibana core, not this guest.
 
 The shell owns syntax, variables, command exit status, temporary pipeline
 buffers, and computations. It has no filesystem, task model, task names,

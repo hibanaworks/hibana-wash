@@ -4,7 +4,8 @@ A small shell for [hibana-wasip1-runtime](https://github.com/hibanaworks/hibana-
 and ChoreoFS. It runs as a real WASI Preview 1 guest.
 
 The shell reads scripts, expands variables, and runs commands. It has no
-filesystem of its own. File and terminal I/O use six WASI imports. The host
+filesystem of its own. It uses Rust std for strings, collections, file I/O,
+and terminal I/O. These operations are WASI imports. The host
 passes those requests through projected Hibana Endpoints and uses ChoreoFS
 to perform the admitted object operations.
 
@@ -58,10 +59,16 @@ or glob expansion. This is a small shell language, not a Bash or POSIX shell
 implementation. It does not launch native programs or support background jobs,
 command substitution, heredocs, functions, or regular expressions.
 
-The initial profile uses one 64KiB memory page, no heap, scripts up to 4,096
-bytes, 256 tokens, 128 syntax nodes, 32 arguments, and 16 variables. Pipeline
-and file-input buffers hold at most 4,096 bytes. Host object capacities are
-separate. These bounds are resource limits, never task authorization rules.
+The guest starts with one 64KiB memory page. Its std allocator uses that
+linear memory. Further pages require the host's projected `MemoryGrow`
+request/reply; the guest does not impose a one-page maximum. The host supplies
+backing capacity and decides whether a grow request fits. The initial host
+integration supplies up to 1MiB per participant, committed as needed.
+
+Scripts are limited to 4,096 bytes and 256 tokens. Variables, syntax trees,
+pipelines, and file input use ordinary Rust collections. There are no manually
+packed word buffers or fixed variable slots. Host object capacities are
+separate resource limits, never task authorization rules.
 
 ## Build
 
@@ -71,14 +78,18 @@ sh scripts/build.sh
 ```
 
 The result is `target/wasm32-wasip1/release/hibana-wash.wasm`. There are no
-Rust dependencies or shell-library patches. Native execution is rejected at
+external Rust dependencies or shell-library patches. The guest uses std; the
+Hibana core keeps its no_std boundary. Native execution is rejected at
 compile time. Native tests exercise the parser only and supply no substitute FS.
 
 Each stdin request is a four-byte little-endian byte count followed by that
 many script bytes. This preserves multiline scripts. The guest emits a
 `wash> ` prompt after each request. `exit N` ends the guest with status `N`.
 An explicit `fd_close` completes each output redirect, so service-close errors
-cannot disappear in a file destructor.
+cannot disappear in a file destructor. Directory iteration requests the
+runtime's 96-byte directory chunks directly. This avoids passing a large libc
+directory buffer to a bounded projected reply. This small WASI adapter has no
+filesystem or directory cache; all other file operations use std::fs.
 
 ```sh
 cargo +1.95.0 test --locked --lib
@@ -87,7 +98,7 @@ python3 tools/profile.py target/wasm32-wasip1/release/hibana-wash.wasm
 ```
 
 The initial consumer tests execute scripts under Hibana 0.9.9 and the pinned
-WASI runtime, through real WASI requests and ChoreoFS. They cover private work,
+WASI runtime, through real WASI requests and ChoreoFS, including heap growth. They cover private work,
 error recovery, early requests that must wait, rejected arguments, and a
 build/test/deploy task. They are mechanism tests, not scored model experiments.
 
