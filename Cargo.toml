@@ -1,0 +1,23 @@
+[package]
+name = "hibana-wash"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+publish = false
+license = "MIT OR Apache-2.0"
+description = "A small WASI shell for projected ChoreoFS operations"
+
+[workspace]
+
+[[bin]]
+name = "hibana-wash"
+path = "src/main.rs"
+test = false
+bench = false
+
+[profile.release]
+panic = "abort"
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = "debuginfo"

@@ -1,0 +1,21 @@
+name: quality
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  guest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - run: |
+          rustup toolchain install 1.95.0 --profile minimal --component clippy --component rustfmt
+          rustup target add --toolchain 1.95.0 wasm32-wasip1
+      - run: |
+          cargo +1.95.0 fmt --check
+          cargo +1.95.0 test --locked --lib
+          sh scripts/build.sh
+          cargo +1.95.0 clippy --locked --target wasm32-wasip1 --release -- -D warnings
+          python3 tools/profile.py target/wasm32-wasip1/release/hibana-wash.wasm > profile.json
+          python3 -c 'import json; p=json.load(open("profile.json")); assert not p["non_wasi_imports"]; assert len(p["imports"]) == 6; assert p["memories"] == [{"flags": 1, "minimum": 1, "maximum": 1}]'
