@@ -1,7 +1,9 @@
 # hibana-wash
 
 This repository owns a small WASI guest shell. Keep it dependency-free,
-Rust 2024 / stable Rust 1.95, and use std for readable shell code.
+Rust 2024 with the latest stable Rust, and use std for readable shell code.
+Keep Cargo.toml rust-version as the minimum supported version, not a development
+toolchain pin.
 The no_std/no_alloc constraints belong to Hibana core, not this guest.
 
 The shell owns syntax, variables, command exit status, temporary pipeline

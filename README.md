@@ -73,7 +73,7 @@ separate resource limits, never task authorization rules.
 ## Build
 
 ```sh
-rustup target add --toolchain 1.95.0 wasm32-wasip1
+rustup target add --toolchain stable wasm32-wasip1
 sh scripts/build.sh
 ```
 
@@ -92,8 +92,8 @@ directory buffer to a bounded projected reply. This small WASI adapter has no
 filesystem or directory cache; all other file operations use std::fs.
 
 ```sh
-cargo +1.95.0 test --locked --lib
-cargo +1.95.0 clippy --locked --target wasm32-wasip1 --release -- -D warnings
+cargo +stable test --locked --lib
+cargo +stable clippy --locked --target wasm32-wasip1 --release -- -D warnings
 python3 tools/profile.py target/wasm32-wasip1/release/hibana-wash.wasm
 ```
 
