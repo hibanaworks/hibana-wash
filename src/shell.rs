@@ -257,7 +257,7 @@ impl Shell {
         }
         let bytes;
         let input = if let Some(path) = input_path {
-            bytes = fs::read(path)?;
+            bytes = fs::read(&path).map_err(|error| format!("read {}: {error}", path.display()))?;
             bytes.as_slice()
         } else {
             input
@@ -268,10 +268,11 @@ impl Shell {
                 .create(true)
                 .truncate(!append)
                 .append(append)
-                .open(path)?;
+                .open(&path)
+                .map_err(|error| format!("open output {}: {error}", path.display()))?;
             let result = self.command(&args, input, &mut file, budget);
             let closed = files::close(file);
-            closed?;
+            closed.map_err(|error| format!("close output {}: {error}", path.display()))?;
             result
         } else {
             self.command(&args, input, output, budget)
@@ -314,7 +315,10 @@ impl Shell {
                     output.write_all(input)?;
                 }
                 for path in &args[1..] {
-                    output.write_all(&fs::read(self.path(path))?)?;
+                    let path = self.path(path);
+                    let bytes = fs::read(&path)
+                        .map_err(|error| format!("read {}: {error}", path.display()))?;
+                    output.write_all(&bytes)?;
                 }
                 0
             }
@@ -339,9 +343,15 @@ impl Shell {
                     .filter(|path| !path.is_empty())
                     .ok_or(usage)?;
                 if reading {
-                    output.write_all(&files::read_nonblocking(&self.path(path))?)?;
+                    let path = self.path(path);
+                    let bytes = files::read_nonblocking(&path)
+                        .map_err(|error| format!("nonblocking read {}: {error}", path.display()))?;
+                    output.write_all(&bytes)?;
                 } else {
-                    files::write_nonblocking(&self.path(path), input)?;
+                    let path = self.path(path);
+                    files::write_nonblocking(&path, input).map_err(|error| {
+                        format!("nonblocking output {}: {error}", path.display())
+                    })?;
                 }
                 0
             }
@@ -349,16 +359,20 @@ impl Shell {
                 if args.len() != 3 {
                     return Err("cp SOURCE DESTINATION".into());
                 }
-                let bytes = fs::read(self.path(arg(1)))?;
+                let source = self.path(arg(1));
+                let target = self.path(arg(2));
+                let bytes = fs::read(&source)
+                    .map_err(|error| format!("read {}: {error}", source.display()))?;
                 let mut file = OpenOptions::new()
                     .write(true)
                     .create(true)
                     .truncate(true)
-                    .open(self.path(arg(2)))?;
+                    .open(&target)
+                    .map_err(|error| format!("open output {}: {error}", target.display()))?;
                 let written = file.write_all(&bytes);
                 let closed = files::close(file);
-                written?;
-                closed?;
+                written.map_err(|error| format!("write {}: {error}", target.display()))?;
+                closed.map_err(|error| format!("close output {}: {error}", target.display()))?;
                 0
             }
             "pwd" => {

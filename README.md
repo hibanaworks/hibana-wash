@@ -44,6 +44,9 @@ assignments, newline and `;`, `&&`, `||`, `|`, `<`, `>`, `>>`, `if/then/else/fi`
 The shell parses the entire script before executing it. A syntax error causes
 no command in that script to run. A command error sets a nonzero exit status
 and permits subsequent commands or a later corrected script.
+File errors identify the attempted read, output open, write or close and its
+path, while retaining the underlying WASI error. A close refusal is observable;
+the shell neither retries it nor chooses another operation for the caller.
 
 Built-in commands:
 
