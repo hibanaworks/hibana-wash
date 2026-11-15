@@ -49,6 +49,7 @@ Built-in commands:
 
 - `echo`, `printf` (`%s`, `%d`, `%%`, `\n`, `\t`, `\r`, `\\`)
 - `cat`, `cp`, `ls`, `pwd`, `cd`
+- `dd if=FILE iflag=nonblock` (either option order): read using WASI NONBLOCK
 - `grep LITERAL`, `wc` (byte count), `expr INTEGER OP INTEGER`, `read VARIABLE`
 - `test`, `[`, `true`, `false`, `:`, `.`, `source`, `exit`, `help`
 
@@ -58,6 +59,13 @@ Variable expansion preserves each word. There is no implicit field splitting
 or glob expansion. This is a small shell language, not a Bash or POSIX shell
 implementation. It does not launch native programs or support background jobs,
 command substitution, heredocs, functions, or regular expressions.
+
+Ordinary reads may wait for an incoming message. The bounded `dd` form opens
+the file with WASI NONBLOCK and returns an error when no data is ready. It does
+not treat that error as EOF, choose another operation, or retry on the user's
+behalf. A script may inspect its exit status and choose its own next command.
+It supports only the two operands above, rather than the full external `dd`
+utility. Admission remains with the file's actual Endpoint.
 
 The guest starts with one 64KiB memory page. Its std allocator uses that
 linear memory. Further pages require the host's projected `MemoryGrow`
@@ -89,7 +97,8 @@ An explicit `fd_close` completes each output redirect, so service-close errors
 cannot disappear in a file destructor. Directory iteration requests the
 runtime's 96-byte directory chunks directly. This avoids passing a large libc
 directory buffer to a bounded projected reply. This small WASI adapter has no
-filesystem or directory cache; all other file operations use std::fs.
+filesystem or directory cache. Nonblocking opens also use the standard WASI
+flag directly; byte reads and ordinary file operations use Rust std.
 
 ```sh
 cargo +stable test --locked --lib

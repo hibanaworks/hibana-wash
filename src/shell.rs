@@ -318,6 +318,33 @@ impl Shell {
                 }
                 0
             }
+            "dd" => {
+                let usage = "dd if=FILE iflag=nonblock | dd of=FILE oflag=nonblock";
+                let (path, flags) = match &args[1..] {
+                    [path, flags]
+                        if matches!(flags.as_str(), "iflag=nonblock" | "oflag=nonblock") =>
+                    {
+                        (path, flags)
+                    }
+                    [flags, path]
+                        if matches!(flags.as_str(), "iflag=nonblock" | "oflag=nonblock") =>
+                    {
+                        (path, flags)
+                    }
+                    _ => return Err(usage.into()),
+                };
+                let reading = flags == "iflag=nonblock";
+                let path = path
+                    .strip_prefix(if reading { "if=" } else { "of=" })
+                    .filter(|path| !path.is_empty())
+                    .ok_or(usage)?;
+                if reading {
+                    output.write_all(&files::read_nonblocking(&self.path(path))?)?;
+                } else {
+                    files::write_nonblocking(&self.path(path), input)?;
+                }
+                0
+            }
             "cp" => {
                 if args.len() != 3 {
                     return Err("cp SOURCE DESTINATION".into());
@@ -402,7 +429,7 @@ impl Shell {
             "help" => {
                 writeln!(
                     output,
-                    "echo printf cat cp ls pwd cd grep wc expr read test [ true false : source . exit"
+                    "echo printf cat dd cp ls pwd cd grep wc expr read test [ true false : source . exit"
                 )?;
                 writeln!(output, "quotes $variables $? ; && || | < > >> if for while")?;
                 0
